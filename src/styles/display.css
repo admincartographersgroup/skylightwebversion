@@ -1,0 +1,99 @@
+:root {
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: #000;
+  overflow: hidden;
+}
+.display-body {
+  cursor: none; /* hidden on the projector */
+}
+.display-body.show-cursor {
+  cursor: auto;
+}
+.display-root {
+  position: fixed;
+  inset: 0;
+  background: #000;
+}
+.display-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hud {
+  position: fixed;
+  top: 10px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 12px/1.2 "JetBrains Mono", ui-monospace, monospace;
+  color: #c9cdd6;
+  background: rgba(10, 12, 16, 0.6);
+  padding: 6px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+.hud-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.hud-dot.ok {
+  background: #4ade80;
+}
+.hud-dot.bad {
+  background: #e0533d;
+}
+.reconnect {
+  position: fixed;
+  bottom: 14px;
+  right: 16px;
+  font: 12px "JetBrains Mono", ui-monospace, monospace;
+  color: #6b7280;
+}
+.ambient-toggle,
+.settings-toggle {
+  position: fixed;
+  bottom: 12px;
+  font: 12px "JetBrains Mono", ui-monospace, monospace;
+  color: #c9cdd6;
+  background: rgba(10, 12, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.12; /* stay out of the way; reveal on hover */
+  transition: opacity 0.2s ease;
+}
+.ambient-toggle {
+  left: 12px;
+}
+.settings-toggle {
+  right: 12px;
+}
+.ambient-toggle:hover,
+.ambient-toggle:focus-visible,
+.settings-toggle:hover,
+.settings-toggle:focus-visible {
+  opacity: 0.9;
+  outline: none;
+}
+.ambient-toggle.on {
+  border-color: rgba(74, 222, 128, 0.5);
+  color: #4ade80;
+}
+.ambient-warn {
+  color: #e0a23d;
+}

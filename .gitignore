@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.log
+
+# generated at postinstall (scripts/make-icons.mjs) — not committed
+public/icons/
+
+# editor / OS
+.DS_Store
+.env
+.env.local
+.idea/
+.vscode/
