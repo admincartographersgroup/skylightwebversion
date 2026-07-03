@@ -118,6 +118,8 @@ export interface Config {
   airport: Airport;
   /** Show the on-screen debug HUD. */
   showHud: boolean;
+  /** Show the project credit line at the bottom of the screen. */
+  showCredit: boolean;
 
   // --- sky layer (sun / moon / stars / satellites at true positions) ---
   showStars: boolean;
@@ -206,6 +208,7 @@ export const DEFAULT_CONFIG: Config = {
   showAirport: true,
   airport: SFO_AIRPORT,
   showHud: false,
+  showCredit: true,
 
   showStars: true,
   showSun: true,

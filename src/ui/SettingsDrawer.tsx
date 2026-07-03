@@ -330,6 +330,9 @@ export function SettingsDrawer({
             <Row label="Debug HUD">
               <Toggle value={config.showHud} onChange={(v) => patch({ showHud: v })} />
             </Row>
+            <Row label="Credit text" hint="Cameron Paczek's original Skylight project">
+              <Toggle value={config.showCredit} onChange={(v) => patch({ showCredit: v })} />
+            </Row>
           </Section>
 
           <Section title="Sky layer">

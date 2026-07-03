@@ -97,6 +97,11 @@ export function App() {
             </span>
           </div>
         )}
+        {config.showCredit && (
+          <div className="credit-text">
+            100% credit for this project to Cameron Paczek and his original project Skylight
+          </div>
+        )}
       </div>
 
       {!isKiosk && (

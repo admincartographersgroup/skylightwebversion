@@ -97,3 +97,15 @@ body,
 .ambient-warn {
   color: #e0a23d;
 }
+.credit-text {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 92vw;
+  font: 300 11px/1.3 Inter, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  color: rgba(174, 182, 198, 0.4);
+  text-align: center;
+  pointer-events: none;
+}
