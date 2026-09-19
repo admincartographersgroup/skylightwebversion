@@ -1,9 +1,12 @@
-// Live aircraft feed, polled directly from the browser against the free
-// airplanes.live API (it allows cross-origin requests, so no backend proxy
-// is needed). Adapted from Skylight's server/src/datasource.ts: the radio
-// (dump1090) path and the radio+API merge are dropped since this build has
-// no local ADS-B receiver — every visitor's browser is its own independent
-// client of the public API, centered on their own location.
+// Live aircraft feed. Adapted from Skylight's server/src/datasource.ts: the
+// radio (dump1090) path and the radio+API merge are dropped since this build
+// has no local ADS-B receiver.
+//
+// The free community feeds (adsb.lol, adsb.fi) don't send CORS headers, and
+// airplanes.live now blocks unregistered projects, so browsers can't read
+// them directly. Instead the app asks a tiny relay (worker/flight-proxy.js,
+// a Cloudflare Worker) that fetches the feed and adds the CORS header. Each
+// visitor's browser still polls independently, centred on their own location.
 
 import type { Aircraft } from "../lib/aircraft.js";
 import type { Config } from "../lib/config.js";
@@ -11,7 +14,7 @@ import { llToMeters, metersToMiles, rangeMeters } from "../lib/geo.js";
 import { lookupAirline, lookupType } from "./enrich/tables.js";
 import { enrichSync, pruneEnrichCache } from "./enrich/routes.js";
 
-/** Raw readsb-style aircraft record (subset we use) — airplanes.live's shape. */
+/** Raw readsb-style aircraft record (subset we use) — adsb.lol / adsb.fi share this shape. */
 interface RawAircraft {
   hex?: string;
   flight?: string;
@@ -30,11 +33,14 @@ interface RawAircraft {
   rssi?: number;
 }
 
-const API_URL_TEMPLATE = "https://api.airplanes.live/v2/point/{lat}/{lon}/{r}";
+/** URL of the deployed flight-proxy Worker, e.g.
+ *  "https://skylight-feed.<you>.workers.dev". Baked in for every visitor;
+ *  the settings drawer's "Data feed URL" overrides it for one browser. */
+export const DEFAULT_FEED_URL = "";
 const NM_PER_MILE = 0.868976;
-/** How often to poll. Every browser tab polls independently, so this stays
- *  gentle on the shared free API — still feels live. */
-const POLL_MS = 3000;
+/** How often to poll. Every open display polls independently, so this stays
+ *  gentle on the shared proxy — planes are interpolated between fixes. */
+const POLL_MS = 4000;
 /** Hold off after an HTTP 429 — hammering through a rate limit just extends it. */
 const RATE_LIMIT_BACKOFF_MS = 15_000;
 
@@ -121,12 +127,16 @@ export class AircraftSource {
     this.timer = null;
   }
 
-  private buildUrl(): string {
+  private buildUrl(): string | null {
     const c = this.o.getConfig();
+    const base = (c.feedUrl || DEFAULT_FEED_URL).trim();
+    if (!base) return null;
     const r = Math.min(250, Math.ceil(c.radiusMiles * NM_PER_MILE) + 1);
-    return API_URL_TEMPLATE.replace("{lat}", String(c.centerLat))
-      .replace("{lon}", String(c.centerLon))
-      .replace("{r}", String(r));
+    const u = new URL(base);
+    u.searchParams.set("lat", String(c.centerLat));
+    u.searchParams.set("lon", String(c.centerLon));
+    u.searchParams.set("dist", String(r));
+    return u.toString();
   }
 
   private withinRadius(list: Aircraft[]): Aircraft[] {
@@ -143,12 +153,22 @@ export class AircraftSource {
     const now = Date.now();
     if (now < this.apiBackoffUntil) {
       const waitS = Math.ceil((this.apiBackoffUntil - now) / 1000);
-      this.status = { ...this.status, ok: false, message: `API rate limited — retrying in ${waitS}s` };
+      this.status = { ...this.status, ok: false, message: `feed rate limited — retrying in ${waitS}s` };
       this.o.onStatus(this.status);
       return;
     }
 
-    const url = this.buildUrl();
+    let url: string | null;
+    try {
+      url = this.buildUrl();
+    } catch {
+      url = null; // malformed feed URL typed into settings
+    }
+    if (!url) {
+      this.status = { ok: false, count: 0, lastOk: null, message: "no data feed set — open settings → Data feed" };
+      this.o.onStatus(this.status);
+      return;
+    }
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) {

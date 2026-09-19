@@ -6,10 +6,13 @@ access, and it shows the aircraft currently over you — sun, moon, stars, and
 satellites too — ready to project on your ceiling.
 
 Every visitor's browser talks **directly** to the free public data sources
-(airplanes.live for aircraft, adsbdb for routes, Nominatim for place search,
-Celestrak for satellites, OurAirports for runways) — there's no backend of
-ours in the middle. That means the exact same URL works for you on your
-Chromebook *and* as a public site anyone can open to see their own local sky.
+(adsbdb for routes, Nominatim for place search, Celestrak for satellites,
+OurAirports for runways). The one exception is live aircraft positions: the
+free community feeds don't allow browsers to read them directly, so the app
+asks a tiny stateless relay (a free Cloudflare Worker, see
+[Flight-data proxy](#flight-data-proxy-required)). The same URL works for you
+on your Chromebook *and* as a public site anyone can open to see their own
+local sky.
 
 ## What's different from the original Pi build
 
@@ -38,6 +41,32 @@ npm run dev
 Open the printed `http://localhost:5173/` URL, allow location access (or
 type one in), and you should see live traffic. Press **S** for settings,
 **F** for fullscreen "ambient" mode (also holds the screen awake).
+
+## Flight-data proxy (required)
+
+Live aircraft come from the free **adsb.lol** and **adsb.fi** community feeds.
+Browsers can't read those directly (they don't send CORS headers), and
+airplanes.live — what the first version used — now blocks unregistered
+projects. So [`worker/flight-proxy.js`](worker/flight-proxy.js) is a ~100-line
+Cloudflare Worker that fetches the feed, falls back between the two, caches for
+3 seconds, and adds the CORS header. It stores nothing and has no accounts.
+
+**Deploy it (about 5 minutes, free):**
+
+1. Make a free account at [dash.cloudflare.com](https://dash.cloudflare.com).
+2. **Workers & Pages → Create → Create Worker.** Name it (e.g. `skylight-feed`) → **Deploy**.
+3. Click **Edit code**, delete the sample, paste in the entire contents of
+   `worker/flight-proxy.js`, and **Deploy**.
+4. Copy the Worker's URL (`https://skylight-feed.<you>.workers.dev`).
+5. In the app: **Settings → Data feed → Feed URL**, paste it. Planes should
+   appear within a few seconds. To make it the default for every visitor, set
+   `DEFAULT_FEED_URL` in [`src/data/aircraftSource.ts`](src/data/aircraftSource.ts) and push.
+
+To use it from another domain, add that origin to `ALLOWED_ORIGINS` at the top
+of the Worker. **Free-tier limit:** 100,000 requests/day, and each open display
+polls every 4 s (~21,600/day), so the free plan covers roughly 4 displays
+running all day. A public site with many viewers needs the $5/month Workers
+plan (10 million requests/month).
 
 ## Publish it as a real website (GitHub Pages)
 
@@ -120,8 +149,8 @@ requests.
 
 ## Limitations vs. the Pi build
 
-- **No local radio.** This always uses the free airplanes.live API, so
-  coverage depends on nearby volunteer ADS-B receivers — usually excellent
+- **No local radio.** This always uses the free community feeds (adsb.lol /
+  adsb.fi), so coverage depends on nearby volunteer ADS-B receivers — usually excellent
   near cities/airports, sparser in very remote areas. If you later get an
   RTL-SDR and want direct local decode, use the [original Pi build](../README.md)
   instead (or point that build's `AIRCRAFT_JSON_URL` at your own receiver).
@@ -133,8 +162,7 @@ requests.
 
 ## Being a good citizen of the free APIs
 
-Every visitor's browser polls airplanes.live directly (every 3s), so load
-scales naturally with usage — there's no shared bottleneck server on our
-side to worry about. Still, please don't set up automated scripts that hit
-these endpoints outside of normal display use; they're free public services
-run by volunteers.
+Every open display polls the proxy every 4 s, which relays to adsb.lol /
+adsb.fi (cached for 3 s so nearby viewers share one upstream request). Please
+don't point automated scripts at these endpoints outside of normal display
+use; they're free public services run by volunteers.

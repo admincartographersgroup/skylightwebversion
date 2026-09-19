@@ -58,6 +58,8 @@ export interface Config {
   /** Human-readable place name for the current location (shown in the drawer). */
   locationName: string;
   radiusMiles: number;
+  /** Flight-proxy Worker URL for this browser; empty = use the built-in default. */
+  feedUrl: string;
   /** Saved places (airports/cities), switchable from the settings drawer. */
   locationProfiles: LocationProfile[];
 
@@ -151,6 +153,7 @@ export const DEFAULT_CONFIG: Config = {
   centerLon: -122.379,
   locationName: "San Francisco International",
   radiusMiles: 3,
+  feedUrl: "",
   locationProfiles: [],
 
   rotationDeg: 0,

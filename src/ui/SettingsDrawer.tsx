@@ -166,6 +166,17 @@ export function SettingsDrawer({
             </div>
           </Section>
 
+          <Section title="Data feed">
+            <Row label="Feed URL" hint="Your flight-proxy Worker; blank = built-in default">
+              <TextInput
+                value={config.feedUrl}
+                onCommit={(v) => patch({ feedUrl: v })}
+                placeholder="https://….workers.dev"
+                ariaLabel="Data feed URL"
+              />
+            </Row>
+          </Section>
+
           <Section title="Airport">
             <Row label="Show runways">
               <Toggle value={config.showAirport} onChange={(v) => patch({ showAirport: v })} />
