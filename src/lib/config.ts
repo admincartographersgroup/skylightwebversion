@@ -58,7 +58,7 @@ export interface Config {
   /** Human-readable place name for the current location (shown in the drawer). */
   locationName: string;
   radiusMiles: number;
-  /** Flight-proxy Worker URL for this browser; empty = use the built-in default. */
+  /** Flight-feed relay URL for this browser; empty = use the built-in default. */
   feedUrl: string;
   /** Saved places (airports/cities), switchable from the settings drawer. */
   locationProfiles: LocationProfile[];

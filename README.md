@@ -9,8 +9,8 @@ Every visitor's browser talks **directly** to the free public data sources
 (adsbdb for routes, Nominatim for place search, Celestrak for satellites,
 OurAirports for runways). The one exception is live aircraft positions: the
 free community feeds don't allow browsers to read them directly, so the app
-asks a tiny stateless relay (a free Cloudflare Worker, see
-[Flight-data proxy](#flight-data-proxy-required)). The same URL works for you
+asks a tiny stateless relay (a Netlify Function, see
+[Flight-data relay](#flight-data-relay)). The same URL works for you
 on your Chromebook *and* as a public site anyone can open to see their own
 local sky.
 
@@ -42,31 +42,31 @@ Open the printed `http://localhost:5173/` URL, allow location access (or
 type one in), and you should see live traffic. Press **S** for settings,
 **F** for fullscreen "ambient" mode (also holds the screen awake).
 
-## Flight-data proxy (required)
+## Flight-data relay
 
 Live aircraft come from the free **adsb.lol** and **adsb.fi** community feeds.
 Browsers can't read those directly (they don't send CORS headers), and
 airplanes.live — what the first version used — now blocks unregistered
-projects. So [`worker/flight-proxy.js`](worker/flight-proxy.js) is a ~100-line
-Cloudflare Worker that fetches the feed, falls back between the two, caches for
-3 seconds, and adds the CORS header. It stores nothing and has no accounts.
+projects. So [`relay/`](relay/) contains a ~100-line **Netlify Function** that
+fetches the feed, falls back between the two, and adds the CORS header. It
+stores nothing and has no accounts. It's deployed at the URL set as
+`DEFAULT_FEED_URL` in [`src/data/aircraftSource.ts`](src/data/aircraftSource.ts).
 
-**Deploy it (about 5 minutes, free):**
+> **Why Netlify and not Cloudflare Workers?** I tried Workers first: both feeds
+> refuse requests from Cloudflare's shared Worker addresses (adsb.lol answers
+> 429, adsb.fi answers 403), though they answer normal servers fine.
 
-1. Make a free account at [dash.cloudflare.com](https://dash.cloudflare.com).
-2. **Workers & Pages → Create → Create Worker.** Name it (e.g. `skylight-feed`) → **Deploy**.
-3. Click **Edit code**, delete the sample, paste in the entire contents of
-   `worker/flight-proxy.js`, and **Deploy**.
-4. Copy the Worker's URL (`https://skylight-feed.<you>.workers.dev`).
-5. In the app: **Settings → Data feed → Feed URL**, paste it. Planes should
-   appear within a few seconds. To make it the default for every visitor, set
-   `DEFAULT_FEED_URL` in [`src/data/aircraftSource.ts`](src/data/aircraftSource.ts) and push.
+**Redeploy / deploy your own:** zip the contents of `relay/` and drop the zip
+on [app.netlify.com/drop](https://app.netlify.com/drop) (or `netlify deploy`).
+Then set that site's `https://<name>.netlify.app/feed` as `DEFAULT_FEED_URL`,
+or paste it into **Settings → Feed URL** to try it in one browser. To allow
+another website to use the relay, add its origin to `ALLOWED_ORIGINS` at the top
+of `relay/netlify/functions/feed.mjs`.
 
-To use it from another domain, add that origin to `ALLOWED_ORIGINS` at the top
-of the Worker. **Free-tier limit:** 100,000 requests/day, and each open display
-polls every 4 s (~21,600/day), so the free plan covers roughly 4 displays
-running all day. A public site with many viewers needs the $5/month Workers
-plan (10 million requests/month).
+**Usage limits:** each open display polls every 4 s (~21,600 calls/day). Netlify's
+free tier includes 125,000 function calls/month, which is only about 6 display-days,
+so heavy or public use needs a paid Netlify plan (the CDN also shares one answer
+between nearby viewers for 3 s, which helps).
 
 ## Publish it as a real website (GitHub Pages)
 
@@ -162,7 +162,7 @@ requests.
 
 ## Being a good citizen of the free APIs
 
-Every open display polls the proxy every 4 s, which relays to adsb.lol /
+Every open display polls the relay every 4 s, which relays to adsb.lol /
 adsb.fi (cached for 3 s so nearby viewers share one upstream request). Please
 don't point automated scripts at these endpoints outside of normal display
 use; they're free public services run by volunteers.

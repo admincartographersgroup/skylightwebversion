@@ -4,9 +4,9 @@
 //
 // The free community feeds (adsb.lol, adsb.fi) don't send CORS headers, and
 // airplanes.live now blocks unregistered projects, so browsers can't read
-// them directly. Instead the app asks a tiny relay (worker/flight-proxy.js,
-// a Cloudflare Worker) that fetches the feed and adds the CORS header. Each
-// visitor's browser still polls independently, centred on their own location.
+// them directly. Instead the app asks a tiny relay (relay/, a Netlify
+// Function) that fetches the feed and adds the CORS header. Each visitor's
+// browser still polls independently, centred on their own location.
 
 import type { Aircraft } from "../lib/aircraft.js";
 import type { Config } from "../lib/config.js";
@@ -33,10 +33,9 @@ interface RawAircraft {
   rssi?: number;
 }
 
-/** URL of the deployed flight-proxy Worker, e.g.
- *  "https://skylight-feed.<you>.workers.dev". Baked in for every visitor;
- *  the settings drawer's "Data feed URL" overrides it for one browser. */
-export const DEFAULT_FEED_URL = "";
+/** URL of the deployed flight-feed relay (see relay/). Baked in for every
+ *  visitor; the settings drawer's "Feed URL" overrides it for one browser. */
+export const DEFAULT_FEED_URL = "https://visionary-custard-b5ec8b.netlify.app/feed";
 const NM_PER_MILE = 0.868976;
 /** How often to poll. Every open display polls independently, so this stays
  *  gentle on the shared proxy — planes are interpolated between fixes. */

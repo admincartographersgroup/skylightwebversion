@@ -167,11 +167,11 @@ export function SettingsDrawer({
           </Section>
 
           <Section title="Data feed">
-            <Row label="Feed URL" hint="Your flight-proxy Worker; blank = built-in default">
+            <Row label="Feed URL" hint="Flight-feed relay; blank = built-in default">
               <TextInput
                 value={config.feedUrl}
                 onCommit={(v) => patch({ feedUrl: v })}
-                placeholder="https://….workers.dev"
+                placeholder="https://…netlify.app/feed"
                 ariaLabel="Data feed URL"
               />
             </Row>
