@@ -24,6 +24,8 @@ const UPSTREAMS = [
 ];
 
 const CACHE_SECONDS = 3;
+// Identify ourselves to the volunteer-run feeds.
+const UA = "skylight-web-proxy (+https://github.com/admincartographersgroup/skylightwebversion)";
 
 function originAllowed(origin) {
   return !origin || ALLOWED_ORIGINS.includes(origin) || LOCAL_ORIGIN.test(origin);
@@ -79,11 +81,19 @@ export default {
       });
     }
 
+    const errors = [];
     for (const build of UPSTREAMS) {
       const url = build(rLat, rLon, rDist);
+      const host = new URL(url).host;
       try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-        if (!res.ok) continue;
+        const res = await fetch(url, {
+          headers: { "User-Agent": UA, Accept: "application/json" },
+          signal: AbortSignal.timeout(6000),
+        });
+        if (!res.ok) {
+          errors.push(`${host}: HTTP ${res.status}`);
+          continue;
+        }
         const body = await res.text();
         JSON.parse(body); // reject HTML error pages served with a 200
         const headers = {
@@ -93,10 +103,10 @@ export default {
         };
         ctx.waitUntil(cache.put(cacheKey, new Response(body, { headers })));
         return new Response(body, { headers: { ...headers, ...corsHeaders(origin), "X-Cache": "MISS" } });
-      } catch {
-        // try the next upstream
+      } catch (e) {
+        errors.push(`${host}: ${e && e.message ? e.message : "failed"}`);
       }
     }
-    return json({ error: "all upstream feeds failed" }, 502, origin);
+    return json({ error: "all upstream feeds failed", details: errors }, 502, origin);
   },
 };
